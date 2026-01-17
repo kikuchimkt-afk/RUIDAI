@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RUIDAI - 類題作成プロトタイプ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap"
+        rel="stylesheet">
+  <script type="module" crossorigin src="/assets/index-CciUIK_H.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BNX5j-7q.css">
+</head>
+
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="glass-header">
+            <div class="logo">RUIDAI <span class="badge">Prototype</span></div>
+            <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
+                <select id="modelSelect"
+                    style="padding: 0.5rem; border-radius: 4px; border: 1px solid #ccc; font-family: inherit;">
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash</option>
+                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+                </select>
+                <button id="settingsBtn" class="icon-btn" title="設定">⚙️</button>
+            </div>
+        </header>
+
+        <main class="main-container">
+            <!-- Input Section -->
+            <section class="card input-section">
+                <h2>問題アップロード</h2>
+                <div id="dropZone" class="drop-zone">
+                    <p>ここに画像をドラッグ＆ドロップ<br>またはクリップボードから貼り付け (Ctrl+V)</p>
+                    <input type="file" id="fileInput" accept="image/*" multiple hidden />
+                    <button id="uploadBtn" class="secondary-btn">ページを追加</button>
+                </div>
+                <div id="previewArea" class="preview-grid hidden">
+                    <!-- Image thumbnails will be injected here -->
+                </div>
+
+                <div class="controls">
+                    <div class="control-row">
+                        <div class="control-group">
+                            <label for="printDate">日付</label>
+                            <input type="date" id="printDate" />
+                        </div>
+                        <div class="control-group flex-grow auto-complete-wrapper">
+                            <label for="studentName">生徒名</label>
+                            <input type="text" id="studentName" placeholder="例: 山田太郎" autocomplete="off" />
+                            <ul id="studentNameList" class="dropdown-list hidden"></ul>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <div class="control-group auto-complete-wrapper">
+                            <label for="instructorName">講師名</label>
+                            <input type="text" id="instructorName" placeholder="例: 佐藤先生" autocomplete="off" />
+                            <ul id="instructorNameList" class="dropdown-list hidden"></ul>
+                        </div>
+                        <div class="control-group">
+                            <label for="questionCount">作成数</label>
+                            <input type="number" id="questionCount" value="3" min="1" max="10" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="instruction-section">
+                    <label>AIへの追加指示</label>
+                    <div class="preset-buttons" id="defaultPresets">
+                        <!-- Default Presets will be here -->
+                        <button type="button" class="preset-btn" data-preset="難易度を少し上げて">難しめ</button>
+                        <button type="button" class="preset-btn" data-preset="途中式を詳しく書いて">計算重視</button>
+                        <button type="button" class="preset-btn" data-preset="解説を詳しくして">解説重視</button>
+                    </div>
+                    <div class="preset-buttons" id="userPresets">
+                        <!-- User Custom Presets will be generated here -->
+                    </div>
+
+                    <div class="add-preset-group">
+                        <input type="text" id="newPresetInput" placeholder="新しい指示タグを追加..." />
+                        <button type="button" id="addPresetBtn" class="icon-btn-small" title="追加">＋</button>
+                    </div>
+
+                    <textarea id="customInstructions" placeholder="その他の指示 (例：特に計算問題を多くして / 図形問題を入れて...)"
+                        rows="3"></textarea>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="generateBtn" class="primary-btn" disabled>
+                        <span class="btn-text">類題を作成 ✨</span>
+                        <div class="spinner hidden"></div>
+                    </button>
+                </div>
+                <!-- Progress Bar -->
+                <div id="progressContainer" class="progress-container hidden">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <p class="progress-text">AIが思考中... 約10秒〜20秒かかります</p>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section id="resultSection" class="card result-section hidden">
+                <div class="result-header">
+                    <h2>作成結果</h2>
+                    <div class="result-actions">
+                        <button id="printProblemBtn" class="secondary-btn" title="問題のみ印刷">📖 問題印刷 (A4)</button>
+                        <button id="printSolutionBtn" class="secondary-btn" title="解説のみ印刷">💡 解説印刷 (A4)</button>
+                        <button id="printFullBtn" class="secondary-btn" title="一括印刷">🖨️ 一括印刷</button>
+                        <button id="printInstructorBtn" class="secondary-btn" title="講師用資料作成">👨‍🏫 講師用資料</button>
+                    </div>
+                </div>
+                <div id="resultContent" class="markdown-body">
+                    <!-- Generated content will go here -->
+                </div>
+            </section>
+        </main>
+
+        <!-- API Key Modal -->
+        <div id="apiKeyModal" class="modal-overlay">
+            <div class="modal glass-modal">
+                <h3>Google Gemini API設定</h3>
+                <p>このアプリを使用するにはGoogle APIキーが必要です。</p>
+                <div class="input-group">
+                    <input type="password" id="apiKeyInput" placeholder="APIキーを入力" />
+                    <button id="toggleApiKey" class="icon-btn-small">👁️</button>
+                </div>
+                <div class="links">
+                    <a href="https://aistudio.google.com/app/apikey" target="_blank"
+                        rel="noopener noreferrer">APIキーを取得する ↗</a>
+                </div>
+                <button id="saveApiKeyBtn" class="primary-btn">保存して開始</button>
+            </div>
+        </div>
+        <!-- Image Modal -->
+        <div id="imageModal" class="modal-overlay">
+            <div class="image-modal-content">
+                <span class="close-modal">&times;</span>
+                <img id="modalImage" src="" alt="Full size preview" />
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
