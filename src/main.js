@@ -546,18 +546,15 @@ The output must be a self-contained HTML document suitable for printing.
 1. **Target Audience**: Same academic level as the problem in the image.
 2. **Topic**: Exactly the same mathematical/scientific concept.
 3. **Format**: OUTPUT RAW HTML ONLY. No markdown delimiters.
-4. **Math Notation**:
-    - DO NOT use LaTeX delimiters ($ or \\[ \\]).
-    - Use standard HTML tags for variables (e.g., <i>x</i>, <i>y</i>).
-    - **Layout**:
-      - **CRITICAL**: Do NOT add unnecessary line breaks or <br> tags within a single sentence or question text.
-      - Keep mathematical variables (like <i>x</i>, <i>y</i>, <i>a</i>) INLINE with the text. Never break a line before or after a variable unless it's a new paragraph.
-      - Write questions as continuous text.
-    - **Fractions**: Use a vertical fraction layout with the following HTML structure:
-      \`<span class="fraction"><span class="num">numerator</span><span class="den">denominator</span></span>\`
-    - **Square Roots**: Use the following HTML structure:
-      \`<span class="sqrt"><span class="radical">&radic;</span><span class="radicand">content</span></span>\`
-    - Do NOT use slanted fractions like \`a/5\` or \`<sup>a</sup>/<sub>5</sub>\`.
+4.    - **Math Notation**:
+      - Use **LaTeX** format for all mathematical expressions.
+      - Enclose inline math in \`$\` (e.g., \`$x^2 + y^2 = r^2$\`).
+      - Enclose block math in \`$$\` (two dollar signs).
+      - **Chemical Formulas**: Use LaTeX (e.g., \`$\\text{H}_2\\text{O}$\` or \`$\\ce{H2O}$\`).
+      - **Layout**:
+        - **CRITICAL**: Do NOT add unnecessary line breaks or <br> tags within a single sentence or question text.
+        - Keep mathematical variables INLINE with the text. Never break a line before or after a variable unless it's a new paragraph.
+        - Write questions as continuous text.
 
 # Custom Instructions
 ${instructions}
@@ -572,16 +569,14 @@ The output HTML must contain exactly three main sections within the body:
 2. \`<div class="solutions">...</div>\`
    - Contains the solutions AND explanations for the student.
    - Each item should be \`<div><strong>(1) Answer</strong><div class="explanation">Brief student-friendly explanation...</div></div>\`
-   - **CRITICAL**: Do NOT include the "Instructor Guide" or "Teaching Points" here. Only what the student needs to understand the answer.
 
 3. \`<div class="instructor-guide">...</div>\`
    - **MUST** be included.
-   - **CRITICAL**: This section is ONLY for the teacher/parent.
    - Contains:
-     - \`<h2>作問意図と到達目標</h2>\`: Bullet points explaining why these problems were chosen and what the student should learn.
-     - \`<h2>指導のポイント</h2>\`: Specific advice for teaching these concepts (e.g., common pitfalls, key steps).
-     - \`<h2>解説の順序・フロー</h2>\`: Recommended step-by-step explanation flow for the instructor.
-     - Content should be professional, encouraging, and helpful for a tutor.
+     - \`<h2>作問意図と到達目標</h2>\`
+     - \`<h2>指導のポイント</h2>\`
+     - \`<h2>解説の順序・フロー</h2>\`
+
 `;
 
     const result = await model.generateContent([prompt, ...imageParts]);
@@ -591,6 +586,18 @@ The output HTML must contain exactly three main sections within the body:
     const cleanHtml = text.replace(/```html|```/g, "");
 
     app.resultContent.innerHTML = cleanHtml;
+
+    // Render Math (KaTeX)
+    if (window.renderMathInElement) {
+      renderMathInElement(app.resultContent, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    }
+
     app.resultSection.classList.remove("hidden");
 
     app.resultSection.scrollIntoView({ behavior: 'smooth' });
@@ -630,7 +637,14 @@ function setLoading(isLoading) {
 
 function openPrintPreview(mode) {
   const content = app.resultContent.innerHTML;
-  const win = window.open("", "_blank");
+
+  // Parse HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, 'text/html');
+
+  const problems = doc.querySelector('.problems')?.innerHTML || '<div>問題が見つかりません</div>';
+  const solutions = doc.querySelector('.solutions')?.innerHTML || '<div>解答が見つかりません</div>';
+  const instructor = doc.querySelector('.instructor-guide')?.innerHTML || '<div>講師用ガイドが見つかりません</div>';
 
   const printDate = app.printDate.value || '';
   const studentName = app.studentName.value || '';
@@ -642,63 +656,124 @@ function openPrintPreview(mode) {
     formattedDate = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
   }
 
-  const headerHtml = `
+  // Header template
+  const getHeader = (showScore = true) => `
     <div class="print-header">
-      <div class="header-left">
-        ${formattedDate ? `<span class="date">${formattedDate}</span>` : ''}
-        <div class="names">
-            ${studentName ? `<span class="student">生徒: ${studentName}</span>` : ''}
-            ${instructorName ? `<span class="instructor">講師: ${instructorName}</span>` : ''}
-        </div>
+      <div class="header-top">
+         <h1 class="main-title" id="displayTitle">${title}</h1>
       </div>
-      
-      <div class="header-right">
-        <div class="score-box">
-             <div class="score-item">目標時間<div class="score-line"></div>分</div>
-             <div class="score-item">得点<div class="score-line"></div>/100</div>
-        </div>
+      <div class="header-bottom">
+          <div class="header-left">
+            ${formattedDate ? `<span class="date">${formattedDate}</span>` : ''}
+            <div class="names">
+                ${studentName ? `<span class="student">生徒: ${studentName}</span>` : ''}
+                ${instructorName ? `<span class="instructor">講師: ${instructorName}</span>` : ''}
+            </div>
+          </div>
+          
+          <div class="header-right">
+            ${showScore ? `
+            <div class="score-box">
+                 <div class="score-item">目標時間<div class="score-line"></div>分</div>
+                 <div class="score-item">得点<div class="score-line"></div>/100</div>
+            </div>` : ''}
+          </div>
       </div>
     </div>
   `;
 
-  let customStyles = "";
-  let jsScript = "";
+  let sectionContent = "";
+  let title = "";
+  let headerHtml = "";
 
-  const friendlyCss = `
+  const wrapSection = (titleText, innerContent, addBreak = false) => `
+    <div class="print-section">
+       ${mode !== 'full' ? `<!-- Single mode title skipped in body if header has it, but let's keep h2 for section -->` : ''}
+       <h2>${titleText}</h2>
+       <div class="section-body">
+         ${innerContent}
+       </div>
+    </div>
+    ${addBreak ? '<div class="page-break"></div>' : ''}
+  `;
+
+  // Build content HTML string
+  switch (mode) {
+    case 'problem':
+      title = "問題";
+      headerHtml = getHeader(true);
+      sectionContent = wrapSection("問題", problems);
+      break;
+    case 'solution':
+      title = "解答・解説";
+      headerHtml = getHeader(false);
+      sectionContent = wrapSection("解答・解説", solutions);
+      break;
+    case 'full':
+      title = "類題プリント"; // Default title for full
+      headerHtml = getHeader(true);
+      sectionContent = `
+        ${wrapSection("問題", problems, true)}
+        ${getHeader(false)} 
+        ${wrapSection("解答・解説", solutions, true)}
+        ${getHeader(false)} 
+        ${wrapSection("講師向けガイド", instructor, false)}
+      `;
+      break;
+    case 'instructor':
+      title = "講師向けガイド";
+      headerHtml = getHeader(false);
+      sectionContent = wrapSection("講師向けガイド", instructor);
+      break;
+  }
+
+  const win = window.open("", "_blank");
+
+  const css = `
     @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap');
+    @import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
 
     body {
       font-family: 'Zen Maru Gothic', sans-serif;
       color: #333;
-      padding: 20px;
+      padding: 0;
+      margin: 0;
       line-height: 1.6;
     }
 
+    .print-wrapper {
+        padding: 15mm;
+        padding-bottom: 20mm; /* Space for footer */
+        width: 100%;
+        box-sizing: border-box;
+    }
+
     .print-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
       border-bottom: 2px solid #333;
       padding-bottom: 5px;
     }
-
-    .header-left .date {
-      font-weight: 500;
+    
+    .header-top {
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    
+    .main-title {
+        font-size: 24px;
+        margin: 0;
+        letter-spacing: 2px;
     }
 
-    .header-right {
-      text-align: right;
+    .header-bottom {
       display: flex;
-      gap: 15px;
+      justify-content: space-between;
+      align-items: flex-end;
     }
 
-    .header-right h1 {
-      margin: 0;
-      font-size: 24px;
-      letter-spacing: 2px;
-    }
-
+    .header-left .date { font-weight: 500; margin-right: 15px; }
+    .names { display: inline-flex; gap: 15px; }
+    
     .score-box {
       border: 2px solid #333;
       border-radius: 8px;
@@ -708,320 +783,182 @@ function openPrintPreview(mode) {
       background: #fff;
     }
     
-    .score-item {
-      font-size: 14px;
-      display: flex;
-      align-items: flex-end;
-    }
+    .score-item { font-size: 14px; display: flex; align-items: flex-end; }
+    .score-line { border-bottom: 1px solid #333; width: 60px; margin-left: 5px; }
 
-    .score-line {
-      border-bottom: 1px solid #333;
-      width: 60px;
-      margin-left: 5px;
-    }
-
-    .problems, .solutions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
+    /* Single Column Layout */
+    .problems, .solutions, .section-body {
+      display: block; 
+      width: 100%;
     }
 
     .problem-item {
-      border: 2px dashed #bbb;
-      border-radius: 12px;
-      padding: 15px;
-      background-color: #fff;
+      padding: 10px 0;
+      margin-bottom: 15px;
+      border-bottom: 1px dashed #ccc;
       page-break-inside: avoid;
-      position: relative;
-    }
-
-    h1 {
-      font-size: 1.4rem;
-      margin: 10px 0 15px;
-      border-left: 6px solid #666;
-      padding-left: 10px;
-      color: #333;
     }
     
-    .page-break { page-break-after: always; }
-  `;
+    .problem-item:last-child { border-bottom: none; }
 
-  const fractionCss = `
-    .fraction { display: inline-flex; flex-direction: column; vertical-align: middle; font-size: 0.9em; text-align: center; }
-    .num { border-bottom: 1px solid black; padding: 0 2px; display: block; }
-    .den { padding: 0 2px; display: block; }
-  `;
-
-  const mathCss = `
-    .fraction { display: inline-flex; flex-direction: column; vertical-align: middle; font-size: 0.9em; text-align: center; margin: 0 2px; }
+    /* Math Styles */
+    .fraction { display: inline-flex; flex-direction: column; vertical-align: middle; font-size: 0.9em; text-align: center; margin: 0 4px; }
     .num { border-bottom: 1px solid #333; padding: 0 2px; display: block; }
     .den { padding: 0 2px; display: block; }
 
     .sqrt { display: inline-flex; align-items: baseline; margin: 0 2px; }
     .radical { font-size: 1.2em; margin-right: 0px; line-height: 1; }
     .radicand { border-top: 1px solid #333; padding-top: 2px; padding-left: 1px; display: inline-block; line-height: 1.1; }
+
+    h2 {
+        font-size: 1.2rem;
+        border-left: 5px solid #888;
+        padding-left: 10px;
+        margin-top: 0;
+        margin-bottom: 20px;
+    }
+
+    /* Page Break */
+    .page-break { 
+        page-break-after: always; 
+        height: 0; 
+        display: block; 
+        border: none; 
+    }
+    
+    /* Footer */
+    .print-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 10px;
+        color: #666;
+        padding-bottom: 5mm;
+        background-color: rgba(255, 255, 255, 0.9);
+        z-index: 1000;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    /* Print Controls */
+    .print-controls {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: #f3f4f6;
+        border-bottom: 1px solid #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 20px;
+        box-sizing: border-box;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    
+    .control-group {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    input[type=range] { width: 150px; cursor: pointer; }
+    input[type=text] { padding: 5px; border-radius: 4px; border: 1px solid #ccc; width: 150px; }
+    
+    .buttons { display: flex; gap: 10px; }
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        transition: opacity 0.2s;
+    }
+    .btn-print { background: #4f46e5; color: white; }
+    .btn-close { background: #6b7280; color: white; }
+    .btn:hover { opacity: 0.9; }
+
+    @media print {
+        .print-controls { display: none !important; }
+        body { padding-top: 0 !important; }
+        .print-footer { display: block !important; }
+    }
+    
+    body { 
+        padding-top: 80px; 
+        background-color: #e5e7eb; 
+    }
+    
+    .print-wrapper {
+        background-color: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin: 0 auto;
+        min-height: 297mm;
+        position: relative;
+    }
   `;
 
-  if (mode === 'problem') {
-    // Problem mode: Vertical list with fixed page height distribution
-    customStyles = `
-      ${friendlyCss}
-      
-      .solutions, .instructor-guide, h2 { 
-        display: none !important; 
-      }
-      
-      body {
-        padding: 10mm !important;
-        margin: 0 !important;
-        font-size: 14px;
-        width: 100% !important;
-        box-sizing: border-box;
-      }
-      
-      .print-header {
-        margin-bottom: 5px;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #333;
-        height: 35px; /* Fixed header height */
-      }
-      
-      /* Fixed height container to force equal spacing on A4 */
-      .problems {
-        display: flex;
-        flex-direction: column;
-        /* A4 Height (297mm) - Padding (20mm) - Header (~15mm) = ~260mm */
-        height: 260mm; 
-        width: 100%;
-      }
-      
-      .problem-item {
-        flex: 1; /* Distribute available height equally */
-        width: 100%; /* Force full width */
-        padding: 5px 0;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start; /* Align to top, no forced spacing */
-        page-break-inside: avoid;
-        /* No border or extra line */
-      }
-      
-      .problem-item:last-child {
-        border-bottom: none;
-      }
-      
-      .problem-item::before {
-        content: '(' counter(problem) ')';
-        counter-increment: problem;
-        font-weight: bold;
-        display: block;
-        margin-bottom: 5px;
-      }
-      
-      .problems {
-        counter-reset: problem;
-      }
-      
-      /* Removed answer line '::after' block entirely */
-      
-      h1 {
-        font-size: 1.1rem;
-        margin: 0 0 5px;
-        border-left: 4px solid #333;
-        padding-left: 8px;
-        color: #333;
-      }
-      
-      .math, .fraction { font-size: 1.1em; }
-      ${mathCss}
-    `;
-    // Simplified scaling safety
-    jsScript = `
-      <script>
-      window.onload = function() {
-        document.querySelectorAll('.solutions, .instructor-guide').forEach(el => el.remove());
-      }
-      </script>
-    `;
-  } else if (mode === 'solution') {
-    // Solution & Learner Explanation mode
-    customStyles = `
-      ${friendlyCss}
-      
-      /* Hide problems and INSTRUCTOR guide */
-      .problems, .instructor-guide { 
-        display: none !important; 
-      }
-      
-      /* Show solutions (now includes learner explanation) */
-      .solutions {
-        display: grid;
-        grid-template-columns: 1fr 1fr; /* 2 Columns for readability of explanation */
-        gap: 15px;
-        margin-bottom: 20px;
-        border-bottom: 2px solid #333;
-        padding-bottom: 20px;
-      }
-      
-      .solutions > div {
-        border: 1px solid #ccc; /* Box style for clear separation */
-        border-radius: 8px;
-        padding: 10px;
-        background: transparent !important; 
-        font-size: 13px;
-        page-break-inside: avoid;
-      }
-      
-      .explanation {
-        margin-top: 8px;
-        padding-top: 8px;
-        border-top: 1px dashed #ccc;
-        font-size: 12px;
-        color: #444;
-      }
-
-      h1 { display: none; }
-      
-      ${mathCss}
-    `;
-    jsScript = `
-      <script>
-      window.onload = function() {
-        // Remove problem and instructor guide elements
-        document.querySelectorAll('.problems, .instructor-guide').forEach(el => el.remove());
-        
-        // Auto-scale to fit A4 page
-        const body = document.body;
-        let scale = 1;
-        const pageHeight = 287 * 3.78;
-        
-        while (body.scrollHeight > pageHeight && scale > 0.6) {
-          scale -= 0.02;
-          body.style.transform = 'scale(' + scale + ')';
-          body.style.transformOrigin = 'top left';
-          body.style.width = (100 / scale) + '%';
-        }
-      }
-      </script>
-    `;
-  } else if (mode === 'instructor') {
-    customStyles = `
-      ${friendlyCss}
-      .problems, .solutions { display: none !important; }
-      
-      /* Ensure guide is visible and layout is optimized for single page */
-      .instructor-guide { 
-        display: block; 
-        page-break-inside: avoid; 
-      }
-      
-      .instructor-guide h2 {
-        border-left: 6px solid #4f46e5;
-        padding-left: 10px;
-        margin-top: 15px; /* Reduced top margin */
-        margin-bottom: 10px;
-        color: #333;
-        font-size: 1.2rem;
-      }
-      
-      .instructor-guide ul, .instructor-guide ol {
-        margin-left: 20px;
-        line-height: 1.5; /* Slightly tighter line height */
-        margin-bottom: 10px;
-      }
-      
-      .instructor-guide li {
-        margin-bottom: 4px;
-      }
-      
-      h1 { 
-        text-align: center; 
-        margin-bottom: 1.5rem; 
-        font-size: 1.5rem;
-      }
-      ${mathCss}
-    `;
-    // Add auto-scale logic for instructor mode
-    jsScript = `
-      <script>
-      window.onload = function() {
-        // Remove incompatible elements
-        document.querySelectorAll('.problems, .solutions').forEach(el => el.remove());
-        
-        // Auto-scale to fit A4 page
-        const body = document.body;
-        let scale = 1;
-        const pageHeight = 287 * 3.78; // A4 height approx
-        
-        while (body.scrollHeight > pageHeight && scale > 0.6) {
-          scale -= 0.02;
-          body.style.transform = 'scale(' + scale + ')';
-          body.style.transformOrigin = 'top left';
-          body.style.width = (100 / scale) + '%';
-        }
-      }
-      </script>
-    `;
-  } else {
-    customStyles = `
-      ${friendlyCss}
-      ${mathCss}
-      /* In full mode, show everything but structured */
-    `;
-    jsScript = ``;
-  }
-
-  win.document.write(`
+  const html = `
     <!DOCTYPE html>
     <html>
       <head>
-        <title>類題プリント</title>
-        <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New&display=swap" rel="stylesheet">
-        <style>
-          @page { size: A4; margin: 5mm; }
-          body { font-family: 'Zen Kaku Gothic New', sans-serif; margin: 0; padding: 5mm; width: 100%; box-sizing: border-box; }
-          h1 { font-size: 1.4rem; border-bottom: 2px solid #333; padding-bottom: 0.5rem; margin-bottom: 1rem; }
-          .page-break { page-break-before: always; height: 0; margin: 0; border: none; }
-
-          ${fractionCss}
-
-          .print-controls {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            z-index: 9999;
-            display: flex;
-            gap: 10px;
-          }
-          .print-controls button {
-            padding: 10px 20px;
-            font-size: 14px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-          }
-          .print-btn { background: #4f46e5; color: white; }
-          .close-btn { background: #6b7280; color: white; }
-
-          @media print {
-            .print-controls { display: none !important; }
-            ${customStyles}
-          }
-          ${customStyles}
-        </style>
+        <meta charset="UTF-8">
+        <title>${title} - RUIDAI (Print)</title>
+        <style>${css}</style>
       </head>
       <body>
         <div class="print-controls">
-          <button class="print-btn" onclick="window.print()">🖨️ 印刷 / PDF保存</button>
-          <button class="close-btn" onclick="window.close()">✕ 閉じる</button>
+            <div class="control-group">
+                <label>タイトル:</label>
+                <input type="text" id="titleInput" value="${title}">
+                
+                <label style="margin-left: 15px;">サイズ: <span id="scaleVal">100%</span></label>
+                <input type="range" id="scaleSlider" min="50" max="150" value="100" step="5">
+            </div>
+            <div class="buttons">
+                <button class="btn btn-print" onclick="window.print()">🖨️ 印刷</button>
+                <button class="btn btn-close" onclick="window.close()">✕ 閉じる</button>
+            </div>
         </div>
-        ${headerHtml}
-        ${content}
-        ${jsScript}
+
+        <div class="print-wrapper" id="printContent">
+            ${headerHtml}
+            ${sectionContent}
+            
+            <div class="print-footer">
+                ©ECCベストワン藍住・北島中央
+            </div>
+        </div>
+
+        <script>
+            const slider = document.getElementById('scaleSlider');
+            const label = document.getElementById('scaleVal');
+            const titleInput = document.getElementById('titleInput');
+            
+            slider.addEventListener('input', (e) => {
+                const val = e.target.value;
+                label.textContent = val + '%';
+                document.body.style.zoom = val + '%';
+            });
+            
+            titleInput.addEventListener('input', (e) => {
+                const newTitle = e.target.value;
+                document.querySelectorAll('.main-title').forEach(el => el.textContent = newTitle);
+                document.title = newTitle;
+            });
+        </script>
       </body>
     </html>
-  `);
+  `;
+
+  win.document.write(html);
   win.document.close();
 }
 
