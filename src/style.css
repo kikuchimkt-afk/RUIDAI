@@ -510,6 +510,24 @@ textarea:focus {
   background: rgba(0, 0, 0, 0.05);
 }
 
+.icon-btn-small {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: color 0.2s;
+}
+
+.icon-btn-small:hover {
+  color: var(--primary-color);
+}
+
+
 /* Modal */
 .modal-overlay {
   position: fixed;
@@ -594,12 +612,43 @@ textarea:focus {
   }
 }
 
-/* Markdown Content */
+/* Markdown Content - Result Section */
 .markdown-body {
-  font-family: 'Zen Kaku Gothic New', sans-serif;
+  font-family: 'Zen Maru Gothic', 'Zen Kaku Gothic New', sans-serif;
   color: var(--text-main);
   line-height: 1.8;
 }
+
+/* Print-like Preview Styles */
+.markdown-body .problem-item {
+  padding: 10px 0;
+  margin-bottom: 15px;
+  border-bottom: 1px dashed #ccc;
+  page-break-inside: avoid;
+}
+
+.markdown-body .score-box {
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 5px 15px;
+  display: inline-flex;
+  gap: 20px;
+  background: #fff;
+  margin-bottom: 15px;
+}
+
+.markdown-body .score-item {
+  font-size: 14px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.markdown-body .score-line {
+  border-bottom: 1px solid #333;
+  width: 60px;
+  margin-left: 5px;
+}
+
 
 .markdown-body h1,
 .markdown-body h2,

@@ -547,7 +547,9 @@ The output must be a self-contained HTML document suitable for printing.
 2. **Topic**: Exactly the same mathematical/scientific concept.
 3. **Format**: OUTPUT RAW HTML ONLY. No markdown delimiters.
 4.    - **Math Notation**:
-      - Use **LaTeX** format for all mathematical expressions.
+      - Use **LaTeX** format for mathematical formulas and variables (e.g., $x^2$, $\\frac{1}{2}$).
+      - **IMPORTANT**: Do NOT use LaTeX for simple numbers (e.g. 1, 100, 2024) or units (円, 個, 人) unless they are part of a complex formula.
+      - **Natural Japanese Notation**: Write "100個" (text), NOT "$100$個" or "$100個$". Write "$x$人" (variable x is LaTeX), NOT "$x人$".
       - Enclose inline math in \`$\` (e.g., \`$x^2 + y^2 = r^2$\`).
       - Enclose block math in \`$$\` (two dollar signs).
       - **Chemical Formulas**: Use LaTeX (e.g., \`$\\text{H}_2\\text{O}$\` or \`$\\ce{H2O}$\`).
@@ -588,15 +590,21 @@ The output HTML must contain exactly three main sections within the body:
     app.resultContent.innerHTML = cleanHtml;
 
     // Render Math (KaTeX)
-    if (window.renderMathInElement) {
-      renderMathInElement(app.resultContent, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false }
-        ],
-        throwOnError: false
-      });
-    }
+    const renderMath = () => {
+      if (window.renderMathInElement) {
+        renderMathInElement(app.resultContent, {
+          delimiters: [
+            { left: "$$", right: "$$", display: true },
+            { left: "$", right: "$", display: false }
+          ],
+          throwOnError: false
+        });
+      } else {
+        console.warn("KaTeX renderMathInElement not found, retrying...");
+        setTimeout(renderMath, 500);
+      }
+    };
+    renderMath();
 
     app.resultSection.classList.remove("hidden");
 
@@ -911,6 +919,16 @@ function openPrintPreview(mode) {
       <head>
         <meta charset="UTF-8">
         <title>${title} - RUIDAI (Print)</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+        <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body, {
+              delimiters: [
+                { left: '$$', right: '$$', display: true },
+                { left: '$', right: '$', display: false }
+              ],
+              throwOnError: false
+            });"></script>
         <style>${css}</style>
       </head>
       <body>
